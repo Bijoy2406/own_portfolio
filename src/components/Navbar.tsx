@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X } from "lucide-react";
+import { Menu, X, FileText, ArrowUpRight } from "lucide-react";
 import { PERSONAL_INFO } from "../data/portfolioData";
 
 interface NavbarProps {
@@ -94,7 +94,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeSection }) => {
         </nav>
 
         {/* Desktop Primary CTA Button (per DESIGN.md primary button spec) */}
-        {/* <div className="hidden lg:flex items-center gap-3">
+        <div className="hidden lg:flex items-center gap-3">
           <a
             href={PERSONAL_INFO.contact.resumeUrl}
             target="_blank"
@@ -102,10 +102,10 @@ export const Navbar: React.FC<NavbarProps> = ({ activeSection }) => {
             className="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs sm:text-sm transition-all duration-200 shadow-sm hover:shadow-emerald-500/10 flex items-center gap-1.5 active:scale-[0.98]"
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Resumeee</span>
+            <span>Resume</span>
             <ArrowUpRight className="w-3.5 h-3.5 opacity-70" />
           </a>
-        </div> */}
+        </div>
 
         {/* Mobile Menu Button */}
         <button
@@ -147,7 +147,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeSection }) => {
                   </a>
                 );
               })}
-              {/* <div className="pt-2 mt-2 border-t border-zinc-800">
+              <div className="pt-2 mt-2 border-t border-zinc-800">
                 <a
                   href={PERSONAL_INFO.contact.resumeUrl}
                   target="_blank"
@@ -158,7 +158,7 @@ export const Navbar: React.FC<NavbarProps> = ({ activeSection }) => {
                   <span>View Resume</span>
                   <ArrowUpRight className="w-4 h-4" />
                 </a>
-              </div> */}
+              </div>
             </nav>
           </motion.div>
         )}

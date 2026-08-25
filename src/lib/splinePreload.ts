@@ -1,11 +1,5 @@
 /**
  * Shared preload cache for the Spline runtime + hero scene.
- *
- * The loading screen kicks this off the instant it mounts, so the ~heavy
- * @splinetool/react-spline chunk and the remote .splinecode scene download
- * in the background while the boot animation plays. Hero later calls the
- * same functions and gets the already-in-flight (or resolved) promise
- * instead of starting a second fetch.
  */
 
 const HERO_SCENE_URL = "https://prod.spline.design/kZDDjO5HuC9GJUM2/scene.splinecode";
@@ -63,4 +57,3 @@ export function onSplineLoaded(callback: () => void) {
 }
 
 export { HERO_SCENE_URL };
-

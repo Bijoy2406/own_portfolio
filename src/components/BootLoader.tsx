@@ -6,9 +6,6 @@ interface BootLoaderProps {
   onComplete: () => void;
 }
 
-const MIN_DISPLAY_MS = 1800;
-const SAFETY_TIMEOUT_MS = 15000;
-
 export function BootLoader({ onComplete }: BootLoaderProps) {
   const shouldReduceMotion = useReducedMotion();
   const [progress, setProgress] = useState(0);
@@ -25,45 +22,45 @@ export function BootLoader({ onComplete }: BootLoaderProps) {
   }, []);
 
   useEffect(() => {
-    const start = performance.now();
-    let rafId: number;
-
-    const finish = () => {
-      if (doneRef.current) return;
-      doneRef.current = true;
-      setProgress(100);
-      setExiting(true);
-      setTimeout(onComplete, shouldReduceMotion ? 0 : 550);
-    };
-
     if (shouldReduceMotion) {
-      preloadHeroSpline().finally(finish);
-      const safety = setTimeout(finish, 800);
-      return () => clearTimeout(safety);
+      preloadHeroSpline().finally(() => {
+        setExiting(true);
+        setTimeout(onComplete, 0);
+      });
+      return;
     }
 
-    const step = (now: number) => {
-      const elapsed = now - start;
-      const minFloorReached = elapsed >= MIN_DISPLAY_MS;
+    let rafId: number;
+    let lastTime = performance.now();
 
-      // If robot is NOT loaded yet, stall progress smoothly at 94%
-      // Once robot is loaded, advance to 100%
-      const cap = robotLoaded ? 1.0 : 0.94;
-      const baseRatio = Math.min(elapsed / (MIN_DISPLAY_MS * 1.4), 1.0);
-      const targetRatio = robotLoaded && minFloorReached ? 1.0 : Math.min(baseRatio, cap);
+    const step = (now: number) => {
+      const delta = now - lastTime;
+      lastTime = now;
 
       setProgress((prev) => {
-        const nextVal = Math.floor(targetRatio * 100);
-        return Math.max(prev, nextVal);
+        if (prev >= 100) {
+          if (!doneRef.current) {
+            doneRef.current = true;
+            // Short hold at 100% so all 10 glowing green blocks fill completely
+            setTimeout(() => {
+              setExiting(true);
+              setTimeout(onComplete, 450);
+            }, 250);
+          }
+          return 100;
+        }
+
+        // Cap at 95% while waiting for robot 3D model, 100% when robot is ready
+        const maxCap = robotLoaded ? 100 : 95;
+
+        // Smooth speed: fast count-up once robot is loaded (~3-5% per frame)
+        // steady speed while waiting (~1% per 25ms)
+        const increment = robotLoaded
+          ? Math.max(2, Math.floor(delta * 0.12))
+          : Math.max(1, Math.floor(delta * 0.035));
+
+        return Math.min(prev + increment, maxCap);
       });
-
-      const isReadyToComplete = robotLoaded && minFloorReached;
-      const isSafetyTimeout = elapsed >= SAFETY_TIMEOUT_MS;
-
-      if (isReadyToComplete || isSafetyTimeout) {
-        finish();
-        return;
-      }
 
       rafId = requestAnimationFrame(step);
     };
@@ -82,8 +79,8 @@ export function BootLoader({ onComplete }: BootLoaderProps) {
 
   // Telemetry status text based on progress & robot state
   const getStatusText = (p: number) => {
-    if (p < 30) return "INITIALIZING SYSTEM ARCHITECTURE";
-    if (p < 75 && !robotLoaded) return "DOWNLOADING 3D ROBOT MODEL";
+    if (p < 35) return "INITIALIZING SYSTEM ARCHITECTURE";
+    if (p < 85 && !robotLoaded) return "DOWNLOADING 3D ROBOT MODEL";
     if (!robotLoaded) return "COMPILING 3D ROBOT SHADERS";
     return "SYSTEM ONLINE // MOUNTING UI";
   };

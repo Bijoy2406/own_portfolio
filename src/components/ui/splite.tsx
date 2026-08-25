@@ -27,4 +27,3 @@ export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
     </Suspense>
   );
 }
-
