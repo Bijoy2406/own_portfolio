@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "skills": {
+    "web-design-reviewer": {
+      "source": "smithery.ai",
+      "sourceType": "well-known",
+      "computedHash": "4a05e32553a1dc916ee4f68f709d478c17de6b8ce184932f56f2b8646f3d4986"
+    }
+  }
+}

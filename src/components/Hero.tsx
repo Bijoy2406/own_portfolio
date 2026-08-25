@@ -4,6 +4,7 @@ import { ChevronDown, ArrowRight, Terminal } from "lucide-react";
 import { PERSONAL_INFO } from "../data/portfolioData";
 import { SplineScene } from "./ui/splite";
 import { TextRotate } from "./ui/text-rotate";
+import { markSplineLoaded } from "../lib/splinePreload";
 
 export const Hero: React.FC = () => {
   const shouldReduceMotion = useReducedMotion();
@@ -45,12 +46,16 @@ export const Hero: React.FC = () => {
 
   React.useEffect(() => {
     const checkIsDesktop = () => {
-      setIsDesktop(window.innerWidth >= 1024);
+      const desktop = window.innerWidth >= 1024;
+      setIsDesktop(desktop);
+      if (!desktop || shouldReduceMotion) {
+        markSplineLoaded();
+      }
     };
     checkIsDesktop();
     window.addEventListener("resize", checkIsDesktop);
     return () => window.removeEventListener("resize", checkIsDesktop);
-  }, []);
+  }, [shouldReduceMotion]);
 
   const scrollToAbout = () => {
     document.querySelector("#about")?.scrollIntoView({ behavior: "smooth" });

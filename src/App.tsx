@@ -7,9 +7,31 @@ import { Skills } from "./components/Skills";
 import { Interests } from "./components/Interests";
 import { Projects } from "./components/Projects";
 import { Contact } from "./components/Contact";
+import { BootLoader } from "./components/BootLoader";
+
+const BOOT_FLAG = "bijoy_portfolio_booted";
 
 export const App: React.FC = () => {
   const [activeSection, setActiveSection] = useState<string>("hero");
+  // Only show the boot loader once per browser session — first visit, not
+  // every internal navigation or component remount.
+  const [booting, setBooting] = useState<boolean>(
+    () => typeof window !== "undefined" && !sessionStorage.getItem(BOOT_FLAG)
+  );
+
+  const handleBootComplete = () => {
+    sessionStorage.setItem(BOOT_FLAG, "1");
+    setBooting(false);
+  };
+
+  // Lock scroll while the boot loader is showing so the page underneath
+  // can mount/animate without being scrollable yet.
+  useEffect(() => {
+    document.body.style.overflow = booting ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [booting]);
 
   useEffect(() => {
     const sectionIds = ["hero", "about", "education", "skills", "interests", "projects", "contact"];
@@ -40,6 +62,13 @@ export const App: React.FC = () => {
 
   return (
     <div className="bg-[#09090b] text-zinc-100 min-h-screen relative selection:bg-emerald-500/20 selection:text-emerald-400">
+      {/* BootLoader owns its own fade-out internally and unmounts itself via
+          onComplete once the exit transition finishes — see BootLoader.tsx.
+          (Not wrapped in AnimatePresence: its exit-completion callback never
+          fired reliably here, which left the overlay stuck in the DOM at
+          opacity:0 while still blocking every click on the page.) */}
+      {booting && <BootLoader onComplete={handleBootComplete} />}
+
       {/* Navigation */}
       <Navbar activeSection={activeSection} />
 

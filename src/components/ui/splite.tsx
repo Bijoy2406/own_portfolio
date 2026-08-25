@@ -1,13 +1,20 @@
 import { Suspense, lazy } from 'react';
+import { preloadSplineModule, markSplineLoaded } from '../../lib/splinePreload';
 
-const Spline = lazy(() => import('@splinetool/react-spline'));
+const Spline = lazy(() => preloadSplineModule());
 
 interface SplineSceneProps {
   scene: string;
   className?: string;
+  onLoad?: (splineApp: any) => void;
 }
 
-export function SplineScene({ scene, className }: SplineSceneProps) {
+export function SplineScene({ scene, className, onLoad }: SplineSceneProps) {
+  const handleLoad = (splineApp: any) => {
+    markSplineLoaded();
+    onLoad?.(splineApp);
+  };
+
   return (
     <Suspense
       fallback={
@@ -16,7 +23,8 @@ export function SplineScene({ scene, className }: SplineSceneProps) {
         </div>
       }
     >
-      <Spline scene={scene} className={className} />
+      <Spline scene={scene} className={className} onLoad={handleLoad} />
     </Suspense>
   );
 }
+
