@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { HandlerEvent } from '@netlify/functions';
 import OpenAI from 'openai';
 import {
   PERSONAL_INFO,
@@ -6,20 +6,23 @@ import {
   SKILL_CATEGORIES,
   PROJECTS_DATA,
   INTERESTS_DATA,
-} from '../src/data/portfolioData';
+} from '../../src/data/portfolioData';
 import { runChatStream, isValidModelId, type ChatMessage } from './_chatStream';
 
 // ─── Fallback model list ─────────────────────────────────────────────────────
 // Walked in order when the client-picked model 404s or 429s. Don't put the
 // env's OPENAI_MODEL first — it would mask which model the user actually
 // picked (the "via:" subtitle would show the env default on every fallback).
-// The first item here is intentionally NOT space-bunny-alpha so the fallback
-// doesn't always land on the same model the visitor never picked.
+//
+// IMPORTANT: this list MUST NOT contain the value of OPENAI_MODEL. Netlify's
+// secret-scanner compares every env-var value against the repo + build
+// output, so duplicating that string here would fail the deploy. The first
+// entry is intentionally a model the user did not pick as their default.
 const FALLBACK_MODELS = [
   'laguna-s-2.1',
   'ling-3.0-flash-fin-free',
+  'ling-3.0-flash-sante-free',
   'space-bunny-alpha-bynara',
-  'space-bunny-alpha',
 ];
 
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
@@ -43,11 +46,6 @@ function estimateTokens(text: string): number {
   return Math.ceil(text.length / 4);
 }
 
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-}
-
 function pruneHistory(messages: ChatMessage[], maxTokens = 2000): ChatMessage[] {
   let total = 0;
   const pruned: ChatMessage[] = [];
@@ -66,7 +64,7 @@ const CACHE_TTL_MS = 1000 * 60 * 60 * 24; // Cache for 24 hours
 
 async function isGitHubRepoPublic(url?: string): Promise<boolean> {
   if (!url) return false;
-  
+
   // Extract owner and repo from URLs like https://github.com/owner/repo
   const match = url.match(/^https?:\/\/github\.com\/([^\/]+)\/([^\/]+)/i);
   if (!match) return false;
@@ -83,11 +81,14 @@ async function isGitHubRepoPublic(url?: string): Promise<boolean> {
   }
 
   try {
-    // 1. Direct Web HEAD request (unlimited rate limit: public repos return 200, private return 404)
+    // 1. Direct Web HEAD request (unlimited rate limit: public repos return
+    //    200, private return 404). Anonymous is fine here.
     const webRes = await fetch(cleanUrl, {
       method: 'HEAD',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'User-Agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
+          '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       },
       redirect: 'manual',
     });
@@ -100,7 +101,9 @@ async function isGitHubRepoPublic(url?: string): Promise<boolean> {
       return false;
     }
 
-    // 2. Fallback to API if Web request gives unexpected status
+    // 2. Fallback to API if Web request gives an unexpected status. The
+    //    GITHUB_TOKEN is optional — anonymous requests still work but with a
+    //    much lower rate limit. The token is ONLY used here, server-side.
     const headers: Record<string, string> = {
       'User-Agent': 'Portfolio-ChatBot-RepoCheck',
       Accept: 'application/vnd.github.v3+json',
@@ -256,49 +259,97 @@ User: Tell me about the weather.
 Cipher: I'm Cipher — Tajuddin's portfolio assistant. I can only help with questions about his work. Feel free to ask about his projects, skills, or how to reach him!`;
 };
 
+// ─── CORS helpers ────────────────────────────────────────────────────────────
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+};
+
+const jsonResponse = (status: number, body: unknown, extraHeaders: Record<string, string> = {}) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', ...corsHeaders, ...extraHeaders },
+  });
+
 // ─── Main Handler ─────────────────────────────────────────────────────────────
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+// We deliberately don't annotate the export with `Handler` from
+// @netlify/functions — v6's typings only allow the legacy
+// `{ statusCode, body, headers }` shape, but Netlify's runtime also accepts
+// a `Response` object directly, which is what we need for the streamed
+// text/event-stream response below. The runtime is the source of truth here.
+async function chatHandler(event: HandlerEvent) {
+  // Preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return new Response('', { status: 204, headers: corsHeaders });
+  }
+  if (event.httpMethod !== 'POST') {
+    return jsonResponse(405, { error: 'Method not allowed' });
   }
 
-  // Rate limiting
-  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || 'unknown';
+  // Rate limiting — Netlify provides the client IP via event.headers / the
+  // standard x-forwarded-for chain.
+  const xff = event.headers['x-forwarded-for'] || event.headers['x-nf-client-connection-ip'];
+  const ip =
+    (typeof xff === 'string' ? xff.split(',')[0]?.trim() : (xff as string[] | undefined)?.[0]) ||
+    'unknown';
   if (!checkRateLimit(ip)) {
-    return res.status(429).json({ error: 'Rate limit exceeded' });
+    return jsonResponse(429, { error: 'Rate limit exceeded' });
   }
 
+  // ── Read all secrets from process.env. None of these are exposed to the
+  // ── browser; they live in Netlify's runtime env only. The OPENAI_BASE_URL
+  // ── and OPENAI_MODEL values are intentionally NEVER hardcoded as defaults
+  // ── anywhere in source — see FALLBACK_MODELS comment for why.
   const apiKey = process.env.OPENAI_API_KEY;
-  const baseURL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-  const defaultModel = process.env.OPENAI_MODEL || process.env.AI_MODEL || 'gpt-4o-mini';
+  const baseURL = process.env.OPENAI_BASE_URL || process.env.AI_BASE_URL;
+  const defaultModel =
+    process.env.OPENAI_MODEL || process.env.AI_MODEL;
 
   if (!apiKey) {
-    return res.status(200).json({
-      reply: "I'm Cipher — Tajuddin's portfolio assistant. The AI backend hasn't been configured yet (API key missing). In the meantime, feel free to explore the portfolio!"
+    return jsonResponse(200, {
+      reply:
+        "I'm Cipher — Tajuddin's portfolio assistant. The AI backend hasn't been configured yet (API key missing). In the meantime, feel free to explore the portfolio!",
     });
   }
 
-  const { messages, model: requestedModel } = req.body;
-  // Validate the client-picked model id; fall back to the server default if
-  // it's missing, malformed, or otherwise suspicious. This is the gate that
-  // keeps an attacker from passing arbitrary strings into the OpenAI SDK.
-  const model = isValidModelId(requestedModel) ? requestedModel : defaultModel;
+  // baseURL is required at runtime — fail fast with a clear server-side error
+  // rather than silently calling the wrong provider.
+  if (!baseURL) {
+    console.error('OPENAI_BASE_URL is not configured');
+    return jsonResponse(500, { error: 'Service temporarily unavailable' });
+  }
 
-  // Input validation
+  let body: any;
+  try {
+    body = event.body ? JSON.parse(event.body) : {};
+  } catch {
+    return jsonResponse(400, { error: 'Invalid JSON body' });
+  }
+
+  const { messages, model: requestedModel } = body;
+
   if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ error: 'Invalid messages format' });
+    return jsonResponse(400, { error: 'Invalid messages format' });
   }
   if (messages.length > 20) {
-    return res.status(400).json({ error: 'Too many messages in request' });
+    return jsonResponse(400, { error: 'Too many messages in request' });
   }
   for (const msg of messages) {
     if (typeof msg.content !== 'string' || msg.content.length > 2000) {
-      return res.status(400).json({ error: 'Message too long (max 2000 characters)' });
+      return jsonResponse(400, { error: 'Message too long (max 2000 characters)' });
     }
     if (!['user', 'assistant'].includes(msg.role)) {
-      return res.status(400).json({ error: 'Invalid message role' });
+      return jsonResponse(400, { error: 'Invalid message role' });
     }
   }
+
+  // Validate the client-picked model id; fall back to the server default if
+  // it's missing, malformed, or otherwise suspicious. This is the gate that
+  // keeps an attacker from passing arbitrary strings into the OpenAI SDK.
+  const model = isValidModelId(requestedModel)
+    ? requestedModel
+    : defaultModel || FALLBACK_MODELS[0];
 
   try {
     const openai = new OpenAI({ apiKey, baseURL });
@@ -306,39 +357,73 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const history = pruneHistory(messages as ChatMessage[]);
 
     // ── Streaming ──────────────────────────────────────────────────────────
-    // The client may have picked a model that's rate-limited or 404'ing; let
-    // the shared helper walk through fallbacks transparently. We expose the
-    // model that actually served the response via x-model-used so the UI can
-    // show "via: foo" if a fallback kicked in.
+    // We return a Web ReadableStream so the browser sees the same
+    // `text/event-stream` shape it got from the dev middleware. The model
+    // that actually served the response travels in each SSE chunk + in the
+    // `x-model-used` response header so the UI can show "via: foo" if a
+    // fallback kicked in.
+    let resolvedModel = '';
     const { stream, modelUsed } = await runChatStream({
       openai,
       systemPrompt,
       history,
       requestedModel: model,
       fallbackModels: FALLBACK_MODELS,
-      onModelResolved: (m) => res.setHeader('x-model-used', m),
+      onModelResolved: (m) => {
+        resolvedModel = m;
+      },
     });
 
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    const encoder = new TextEncoder();
+    const body = new ReadableStream({
+      async start(controller) {
+        try {
+          for await (const delta of stream) {
+            if (delta) {
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ delta, model: modelUsed })}\n\n`)
+              );
+            }
+          }
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        } catch (err: any) {
+          // Surface upstream errors as an SSE error event so the client can
+          // display them instead of a generic network failure.
+          try {
+            controller.enqueue(
+              encoder.encode(
+                `data: ${JSON.stringify({ error: 'Stream interrupted', status: err?.status ?? 500 })}\n\n`
+              )
+            );
+            controller.close();
+          } catch {
+            /* already closed */
+          }
+        }
+      },
+    });
 
-    for await (const delta of stream) {
-      if (delta) {
-        res.write(`data: ${JSON.stringify({ delta, model: modelUsed })}\n\n`);
-      }
-    }
-
-    res.write('data: [DONE]\n\n');
-    res.end();
+    return new Response(body, {
+      status: 200,
+      headers: {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        Connection: 'keep-alive',
+        'X-Accel-Buffering': 'no',
+        'x-model-used': resolvedModel || modelUsed,
+        ...corsHeaders,
+      },
+    });
   } catch (error: any) {
     // Log only the status code, not the full error (avoids leaking SDK internals)
     console.error('Chat API Error — status:', error?.status ?? 'unknown');
 
     const status = error?.status;
-    if (status === 429) return res.status(429).json({ error: 'Rate limit exceeded' });
-    if (status === 401 || status === 403) return res.status(401).json({ error: 'Authentication failed' });
-    return res.status(500).json({ error: 'Service temporarily unavailable' });
+    if (status === 429) return jsonResponse(429, { error: 'Rate limit exceeded' });
+    if (status === 401 || status === 403) return jsonResponse(401, { error: 'Authentication failed' });
+    return jsonResponse(500, { error: 'Service temporarily unavailable' });
   }
 }
+
+export { chatHandler as handler };

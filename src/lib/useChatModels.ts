@@ -67,11 +67,17 @@ export function useChatModels(): UseChatModelsResult {
       setError(e?.message ?? 'Failed to load models');
       // Hard failure shouldn't leave the dropdown empty — show the same
       // curated fallback the server uses so the visitor can still pick.
+      //
+      // IMPORTANT: this list MUST NOT contain the value of OPENAI_MODEL.
+      // Netlify's secret-scanner compares env-var values against the repo +
+      // build output, so duplicating that string in client source would fail
+      // the deploy. The visitor's chosen default model will still be used
+      // by the server when they send a chat message without picking.
       setModels([
-        { id: 'space-bunny-alpha', label: 'Space Bunny Alpha', available: true },
         { id: 'space-bunny-alpha-bynara', label: 'Space Bunny Alpha (Bynara)', available: true },
         { id: 'laguna-s-2.1', label: 'Laguna S 2.1', available: true },
         { id: 'ling-3.0-flash-fin-free', label: 'Ling 3.0 Flash (Free)', available: true },
+        { id: 'ling-3.0-flash-sante-free', label: 'Ling 3.0 Flash Sante (Free)', available: true },
       ]);
     } finally {
       if (mountedRef.current) setLoading(false);

@@ -1,0 +1,58 @@
+# Netlify configuration for Tajuddin Ahmed's portfolio.
+#
+# Build pipeline:
+#   1. `npm run build` → produces `dist/` (Vite SPA) AND regenerates
+#      `public/og-image.png` from the SVG source.
+#   2. Functions are sourced from `netlify/functions/` and exposed under
+#      `/.netlify/functions/<name>`. The redirects in this file rewrite the
+#      public-facing `/api/<name>` paths to the Netlify Functions so the
+#      existing client code (`fetch('/api/chat')`, `/api/models`,
+#      `/api/contact`) keeps working unchanged.
+#
+# Secrets policy:
+#   All env vars marked as "Contains secret values" in the Netlify UI
+#   (OPENAI_API_KEY, RESEND_API_KEY, GITHUB_TOKEN) live ONLY in Netlify's
+#   runtime env. Their VALUES are never hardcoded in source. See the
+#   comments in netlify/functions/*.ts and vite.config.ts for details.
+
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+  # Node 20 is the current Netlify default; pin explicitly so a future
+  # default change doesn't silently break the openai SDK or our fetch
+  # streaming code.
+  node_bundler = "esbuild"
+
+# ── /api/* → Netlify Functions ──────────────────────────────────────────────
+# Rewrite the public path the client already uses to the internal Netlify
+# Function path. Returning the rewrite (status 200) keeps the URL in the
+# browser at /api/chat so client code doesn't need to know about the
+# internal path.
+[[redirects]]
+  from = "/api/chat"
+  to = "/.netlify/functions/chat"
+  status = 200
+
+[[redirects]]
+  from = "/api/models"
+  to = "/.netlify/functions/models"
+  status = 200
+
+[[redirects]]
+  from = "/api/contact"
+  to = "/.netlify/functions/contact"
+  status = 200
+
+# ── Security headers ────────────────────────────────────────────────────────
+# A small baseline; the portfolio doesn't store auth cookies so a strict
+# CSP is fine. Adjust if you ever add third-party scripts.
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"

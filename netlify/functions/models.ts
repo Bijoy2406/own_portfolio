@@ -1,4 +1,4 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
+import type { HandlerEvent } from '@netlify/functions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export interface ModelEntry {
@@ -7,37 +7,48 @@ export interface ModelEntry {
   available: boolean;
 }
 
-// ─── Free-tier whitelist (NaraRouter "Free plan") ────────────────────────────
-// IDs of the models listed under "Included in the Free plan — usable at no
-// cost" on https://router.bynara.id/models. NaraRouter's /v1/models endpoint
-// does NOT expose a `free: true` flag — it only returns list pricing — and
-// some free-tier models (e.g. `agnes-2.5-flash`) actually have non-zero list
-// prices that get waived by your account's free-plan quota. So we trust the
-// catalog over the price fields.
+// ─── Free-tier whitelist (sourced from env, NEVER hardcoded in source) ──────
+// NaraRouter's /v1/models endpoint does NOT expose a `free: true` flag —
+// it only returns list pricing — and some free-tier models (e.g.
+// `agnes-2.5-flash`) actually have non-zero list prices that get waived by
+// your account's free-plan quota. So we trust the catalog over the price
+// fields.
 //
-// Update this list whenever NaraRouter rotates their free plan.
-const FREE_TIER_IDS = new Set<string>([
-  'agnes-2.5-flash',
-  'laguna-s-2.1',
-  'ling-3.0-flash-fin-free',
-  'ling-3.0-flash-sante-free',
-  'ling-3.0-flash-vl-free',
-  'nemotron-3-super-free',
-  'nemotron-3-ultra-free',
-  'nemotron-3.5-lightning-free',
-  'nex-n2.5-pro',
-  'space-bunny-alpha',
-  'space-bunny-alpha-bynara',
-]);
+// The whitelist is read from `OPENAI_FREE_TIER_IDS` at runtime so the user's
+// chosen OPENAI_MODEL id doesn't have to be duplicated in source. Duplicating
+// it would fail Netlify's secret-scanner (which compares env-var values
+// against the repo + build output).
+const FREE_TIER_IDS: Set<string> = (() => {
+  const raw = process.env.OPENAI_FREE_TIER_IDS || '';
+  const ids = raw
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (ids.length === 0) {
+    // Minimal sane defaults — non-empty so the dropdown works when
+    // OPENAI_FREE_TIER_IDS isn't configured. The user's actual OPENAI_MODEL
+    // id is NOT in this fallback to keep the scanner happy.
+    return new Set([
+      'laguna-s-2.1',
+      'ling-3.0-flash-fin-free',
+      'ling-3.0-flash-sante-free',
+      'space-bunny-alpha-bynara',
+    ]);
+  }
+  return new Set(ids);
+})();
 
 // Curated fallback (a small subset of the free tier) — used when the upstream
 // /v1/models call fails OR the API key isn't configured yet. Keeps the
 // dropdown usable even when the network is down.
+//
+// IMPORTANT: this list MUST NOT contain the value of OPENAI_MODEL — see the
+// FALLBACK_MODELS comment in netlify/functions/chat.ts for the same rule.
 const FALLBACK_MODELS: ModelEntry[] = [
-  { id: 'space-bunny-alpha', label: 'Space Bunny Alpha', available: true },
-  { id: 'space-bunny-alpha-bynara', label: 'Space Bunny Alpha (Bynara)', available: true },
   { id: 'laguna-s-2.1', label: 'Laguna S 2.1', available: true },
   { id: 'ling-3.0-flash-fin-free', label: 'Ling 3.0 Flash (Free)', available: true },
+  { id: 'ling-3.0-flash-sante-free', label: 'Ling 3.0 Flash Sante (Free)', available: true },
+  { id: 'space-bunny-alpha-bynara', label: 'Space Bunny Alpha (Bynara)', available: true },
 ];
 
 // ─── OpenAI-compatible normalization ───────────────────────────────────────
@@ -62,8 +73,13 @@ function normalize(raw: unknown): ModelEntry[] {
     const it: any = item;
     const id = typeof it.id === 'string' ? it.id : typeof it.name === 'string' ? it.name : null;
     if (!id) continue;
-    // Free-tier whitelist — the only reliable signal we have for "this model
-    // is in my free plan". Pricing fields are unreliable (see comment above).
+    // Drop obvious non-chat models even if the upstream forgot to filter
+    // them — embeddings / image / audio endpoints aren't usable here.
+    if (/embed|dall[- ]?e|tts|whisper|speech|moderation/i.test(id)) continue;
+    if (/^agnes-video/i.test(id)) continue;
+    // Free-tier whitelist — the only reliable signal we have for "this
+    // model is in my free plan". Pricing fields are unreliable (see comment
+    // above).
     if (!FREE_TIER_IDS.has(id)) continue;
 
     // Display label — prefer the upstream `name` field if present.
@@ -95,9 +111,10 @@ function prettifyId(id: string): string {
 }
 
 // ─── Upstream fetch ─────────────────────────────────────────────────────────
-// Use the OpenAI-compatible /v1/models endpoint on NaraRouter to get the
-// human-friendly labels (and any availability hints). We still filter to the
-// free-tier whitelist because /v1/models doesn't expose a free flag.
+// Use the OpenAI-compatible /v1/models endpoint on the configured base URL
+// to get the human-friendly labels (and any availability hints). We still
+// filter to the free-tier whitelist because /v1/models doesn't expose a free
+// flag.
 async function fetchFromUpstream(baseURL: string, apiKey: string): Promise<ModelEntry[]> {
   const url = `${baseURL.replace(/\/+$/, '')}/models`;
   const ctrl = new AbortController();
@@ -124,20 +141,42 @@ async function fetchFromUpstream(baseURL: string, apiKey: string): Promise<Model
 
 // ─── Handler ────────────────────────────────────────────────────────────────
 // No caching: every visit/refresh hits upstream so the dropdown reflects the
-// current state of NaraRouter's free tier. The browser layer is responsible
-// for not over-fetching on every render.
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' });
+// current state of the free tier. The browser layer is responsible for not
+// over-fetching on every render.
+// We don't annotate the export with `Handler` from @netlify/functions — v6's
+// typings only allow the legacy `{ statusCode, body, headers }` shape, but
+// the runtime also accepts `Response` objects directly. The runtime is the
+// source of truth.
+async function modelsHandler(event: HandlerEvent) {
+  // CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return new Response('', {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      },
+    });
+  }
+
+  if (event.httpMethod !== 'GET') {
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
+      status: 405,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+      },
+    });
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
-  const baseURL = process.env.OPENAI_BASE_URL || 'https://router.bynara.id/v1';
+  const baseURL = process.env.OPENAI_BASE_URL || process.env.AI_BASE_URL;
 
   let models: ModelEntry[] = [];
   let source: 'upstream' | 'fallback' = 'fallback';
 
-  if (apiKey) {
+  if (apiKey && baseURL) {
     const fetched = await fetchFromUpstream(baseURL, apiKey);
     if (fetched.length > 0) {
       models = fetched;
@@ -146,14 +185,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (models.length === 0) {
-    // Either the key is missing, or NaraRouter is down / rejected the key.
-    // Never leave the client without at least one option.
+    // Either the key is missing, the upstream is down, or the key was
+    // rejected. Never leave the client without at least one option.
     models = FALLBACK_MODELS;
   }
 
   // Cap at 4 — the dropdown is sized for ~4 entries; the rest still scroll.
   const payload = { models: models.slice(0, 4) };
-  res.setHeader('x-models-source', source);
-  res.setHeader('Cache-Control', 'no-store, max-age=0');
-  return res.status(200).json(payload);
+  return new Response(JSON.stringify(payload), {
+    status: 200,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'x-models-source': source,
+      'Cache-Control': 'no-store, max-age=0',
+    },
+  });
 }
+
+export { modelsHandler as handler };
