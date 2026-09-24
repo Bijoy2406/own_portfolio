@@ -5,16 +5,20 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "npm run og:image && tsc && vite build",
+    "preview": "vite preview",
+    "start": "npm run build && npm run preview",
+    "og:image": "node scripts/generate-og-image.mjs"
   },
   "dependencies": {
+    "@lottiefiles/dotlottie-react": "^0.19.16",
     "@splinetool/react-spline": "^4.1.0",
     "@splinetool/runtime": "^1.12.98",
     "clsx": "^2.1.1",
     "framer-motion": "^11.18.2",
     "gsap": "^3.15.0",
     "lucide-react": "^0.475.0",
+    "openai": "^7.21.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "tailwind-merge": "^3.0.1"
@@ -26,6 +30,7 @@
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.5.1",
+    "sharp": "^0.33.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5.7.3",
     "vite": "^6.1.0"

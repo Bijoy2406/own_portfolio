@@ -1,8 +1,64 @@
 import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ExternalLink, ChevronDown, Cpu, Activity, CheckCircle2 } from "lucide-react";
-import { PROJECTS_DATA, ProjectItem } from "../data/portfolioData";
+import { ExternalLink, ChevronDown, Cpu, Activity, CheckCircle2, Github, GraduationCap, Sparkles } from "lucide-react";
+import { PROJECTS_DATA, UNIVERSITY_PROJECTS, ProjectItem, UniversityProject } from "../data/portfolioData";
 import gsap from "gsap";
+
+type ProjectsMode = "featured" | "university";
+
+const UniversityProjectCard: React.FC<{ project: UniversityProject }> = ({ project }) => {
+  return (
+    <div className="bg-zinc-900/60 border border-zinc-800 rounded-xl p-6 backdrop-blur-sm transition-colors duration-200 hover:border-zinc-700 hover:-translate-y-0.5">
+      <div className="flex items-start justify-between gap-4 mb-3">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="p-2 rounded-lg bg-zinc-800/80 border border-zinc-700/50 text-emerald-400 shrink-0">
+            <GraduationCap className="w-4 h-4" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-zinc-100 leading-tight truncate">
+              {project.title}
+            </h3>
+            <div className="flex items-center gap-1.5 mt-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/80">
+                {project.course}
+              </span>
+              <span className="text-zinc-700">·</span>
+              <span className="text-[10px] font-mono text-zinc-500">
+                {project.semester}
+              </span>
+            </div>
+          </div>
+        </div>
+        {project.githubUrl && (
+          <a
+            href={project.githubUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-emerald-400 hover:border-zinc-700 transition-colors shrink-0"
+            title="View on GitHub"
+            aria-label={`View ${project.title} on GitHub`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <Github className="w-4 h-4" />
+          </a>
+        )}
+      </div>
+      <p className="text-sm text-zinc-300 leading-relaxed mb-4">
+        {project.shortDescription}
+      </p>
+      <div className="flex flex-wrap gap-1.5">
+        {project.techStack.map((tech) => (
+          <span
+            key={tech}
+            className="px-2 py-0.5 text-[10px] font-mono rounded-full bg-zinc-800/60 text-zinc-400 border border-zinc-700/40"
+          >
+            {tech}
+          </span>
+        ))}
+      </div>
+    </div>
+  );
+};
 
 const scaleAnimation = {
   initial: { scale: 0, x: "-50%", y: "-50%" },
@@ -91,6 +147,7 @@ const ProjectHoverModal: React.FC<ModalProps> = ({ modal, projects }) => {
 };
 
 export const Projects: React.FC = () => {
+  const [mode, setMode] = useState<ProjectsMode>("featured");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [modal, setModal] = useState({ active: false, index: 0 });
   const shouldReduceMotion = useReducedMotion();
@@ -108,13 +165,70 @@ export const Projects: React.FC = () => {
             05. Engineering Portfolio
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-100 mt-2">
-            Featured Projects
+            Projects
           </h2>
           <p className="text-sm text-zinc-400 mt-2 max-w-xl">
-            Click on any project card to view technical architecture, metrics, and implementation details.
+            Real-world products I&apos;ve built, plus the university projects that shaped my foundation.
           </p>
         </div>
 
+        {/* Mode Toggle */}
+        <div
+          role="tablist"
+          aria-label="Project categories"
+          className="inline-flex items-center p-1 mb-10 rounded-lg border border-zinc-800 bg-zinc-900/60 backdrop-blur-sm"
+        >
+          {([
+            { key: "featured", label: "Featured", icon: Sparkles, count: PROJECTS_DATA.length },
+            { key: "university", label: "Academic", icon: GraduationCap, count: UNIVERSITY_PROJECTS.length },
+          ] as { key: ProjectsMode; label: string; icon: React.ComponentType<{ className?: string }>; count: number }[]).map(({ key, label, icon: Icon, count }) => {
+            const active = mode === key;
+            return (
+              <button
+                key={key}
+                role="tab"
+                aria-selected={active}
+                onClick={() => setMode(key)}
+                className={`relative z-10 flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md transition-colors duration-200 ${
+                  active
+                    ? "text-zinc-100"
+                    : "text-zinc-400 hover:text-zinc-200"
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="projects-tab-pill"
+                    className="absolute inset-0 rounded-md bg-zinc-800/80 border border-zinc-700 shadow-sm"
+                    transition={{ type: "spring", stiffness: 380, damping: 32 }}
+                    style={{ zIndex: -1 }}
+                  />
+                )}
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+                <span
+                  className={`ml-1 text-[10px] font-mono px-1.5 py-0.5 rounded-full ${
+                    active
+                      ? "bg-emerald-500/15 text-emerald-400"
+                      : "bg-zinc-800 text-zinc-500"
+                  }`}
+                >
+                  {count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Projects Content — animated swap between Featured and University */}
+        <AnimatePresence mode="wait" initial={false}>
+          {mode === "featured" ? (
+            <motion.div
+              key="featured"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
         {/* Projects Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {PROJECTS_DATA.map((project: ProjectItem, index: number) => {
@@ -268,6 +382,26 @@ export const Projects: React.FC = () => {
             );
           })}
         </div>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="university"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.25, ease: "easeOut" }}
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {UNIVERSITY_PROJECTS.map((project) => (
+                  <UniversityProjectCard key={project.id} project={project} />
+                ))}
+              </div>
+              <p className="text-[11px] font-mono text-zinc-600 mt-6">
+                Coursework &amp; lab projects from AUST — kept compact so the featured work above stays the focus.
+              </p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Floating Animated Project Preview Modal */}

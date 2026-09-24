@@ -8,6 +8,7 @@ import { Interests } from "./components/Interests";
 import { Projects } from "./components/Projects";
 import { Contact } from "./components/Contact";
 import { BootLoader } from "./components/BootLoader";
+import { ChatBot } from "./components/ChatBot";
 
 const BOOT_FLAG = "bijoy_portfolio_booted";
 
@@ -82,6 +83,9 @@ export const App: React.FC = () => {
         <Projects />
         <Contact />
       </main>
+
+      {/* Global AI ChatBot */}
+      <ChatBot />
     </div>
   );
 };

@@ -9,8 +9,11 @@ import { markSplineLoaded } from "../lib/splinePreload";
 export const Hero: React.FC = () => {
   const shouldReduceMotion = useReducedMotion();
 
-  // Words split for precise text reveal animation
-  const staticPart = "Learning & building web apps that";
+  // Words split for precise text reveal animation.
+  // The H1 must lead with the developer's full name so search engines and
+  // assistive tech surface "Tajuddin Ahmed Bijoy" as the primary identity
+  // signal for personal-name SEO.
+  const staticPart = "Tajuddin Ahmed Bijoy,";
   const staticWords = staticPart.split(" ");
 
   const containerVariants = {
@@ -121,11 +124,11 @@ export const Hero: React.FC = () => {
             <motion.span variants={wordVariants} className="inline-block min-w-[200px]">
               <TextRotate
                 texts={[
-                  "actually work.",
-                  "look clean.",
-                  "feel interactive.",
-                  "solve real problems.",
-                  "grow with me."
+                  "full-stack web developer.",
+                  "building real products.",
+                  "shipping with React & Next.js.",
+                  "solving real problems.",
+                  "growing every day."
                 ]}
                 mainClassName="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-emerald-200 inline-block overflow-hidden pb-1"
                 staggerFrom={"first"}
@@ -135,7 +138,7 @@ export const Hero: React.FC = () => {
                 staggerDuration={0.02}
                 splitLevelClassName="overflow-hidden pb-1"
                 transition={{ type: "spring", damping: 25, stiffness: 350 }}
-                rotationInterval={2200}
+                rotationInterval={3200}
               />
             </motion.span>
           </h1>
