@@ -1,4 +1,4 @@
-import type { HandlerEvent } from '@netlify/functions';
+import type { Handler } from '@netlify/functions';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 export interface ModelEntry {
@@ -143,31 +143,28 @@ async function fetchFromUpstream(baseURL: string, apiKey: string): Promise<Model
 // No caching: every visit/refresh hits upstream so the dropdown reflects the
 // current state of the free tier. The browser layer is responsible for not
 // over-fetching on every render.
-// We don't annotate the export with `Handler` from @netlify/functions — v6's
-// typings only allow the legacy `{ statusCode, body, headers }` shape, but
-// the runtime also accepts `Response` objects directly. The runtime is the
-// source of truth.
-async function modelsHandler(event: HandlerEvent) {
-  // CORS preflight
+//
+// Returns the legacy `{ statusCode, body, headers }` shape. Netlify
+// Functions' runtime serializes this directly; returning a web `Response`
+// object crashed with HTTP 502 in production (the deployed function bundle
+// couldn't unwrap it).
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type',
+  'Access-Control-Allow-Methods': 'GET, OPTIONS',
+};
+
+const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return new Response('', {
-      status: 204,
-      headers: {
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Content-Type',
-        'Access-Control-Allow-Methods': 'GET, OPTIONS',
-      },
-    });
+    return { statusCode: 204, headers: corsHeaders };
   }
 
   if (event.httpMethod !== 'GET') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-      },
-    });
+    return {
+      statusCode: 405,
+      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
   }
 
   const apiKey = process.env.OPENAI_API_KEY;
@@ -192,15 +189,16 @@ async function modelsHandler(event: HandlerEvent) {
 
   // Cap at 4 — the dropdown is sized for ~4 entries; the rest still scroll.
   const payload = { models: models.slice(0, 4) };
-  return new Response(JSON.stringify(payload), {
-    status: 200,
+  return {
+    statusCode: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      ...corsHeaders,
       'x-models-source': source,
       'Cache-Control': 'no-store, max-age=0',
     },
-  });
-}
+    body: JSON.stringify(payload),
+  };
+};
 
-export { modelsHandler as handler };
+export { handler };

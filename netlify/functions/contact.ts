@@ -1,4 +1,4 @@
-import type { HandlerEvent } from '@netlify/functions';
+import type { Handler } from '@netlify/functions';
 import { renderContactEmailHtml } from './_email';
 
 // ─── Server-side only ───────────────────────────────────────────────────────
@@ -16,6 +16,9 @@ import { renderContactEmailHtml } from './_email';
 // If CONTACT_INBOX isn't configured, the form returns a generic
 // configuration error to the visitor (rather than silently dropping the
 // message) and logs a server-side alert for the operator.
+//
+// Returns the legacy `{ statusCode, body, headers }` shape — see note in
+// models.ts.
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -23,47 +26,43 @@ const corsHeaders = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const jsonResponse = (status: number, body: unknown) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders },
-  });
+const json = (status: number, body: unknown) => ({
+  statusCode: status,
+  headers: { 'Content-Type': 'application/json', ...corsHeaders },
+  body: JSON.stringify(body),
+});
 
-// We don't annotate the export with `Handler` from @netlify/functions — v6's
-// typings only allow the legacy `{ statusCode, body, headers }` shape, but
-// the runtime also accepts `Response` objects directly. The runtime is the
-// source of truth.
-async function contactHandler(event: HandlerEvent) {
+const handler: Handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
-    return new Response('', { status: 204, headers: corsHeaders });
+    return { statusCode: 204, headers: corsHeaders };
   }
 
   if (event.httpMethod !== 'POST') {
-    return jsonResponse(405, { error: 'Method not allowed' });
+    return json(405, { error: 'Method not allowed' });
   }
 
   let payload: { name?: string; email?: string; subject?: string; message?: string };
   try {
     payload = event.body ? JSON.parse(event.body) : {};
   } catch {
-    return jsonResponse(400, { error: 'Invalid JSON body' });
+    return json(400, { error: 'Invalid JSON body' });
   }
 
   const { name, email, subject, message } = payload || {};
 
   if (!name || !email || !message) {
-    return jsonResponse(400, { error: 'Name, email, and message are required fields.' });
+    return json(400, { error: 'Name, email, and message are required fields.' });
   }
 
   // Basic email shape check — not RFC-strict, just enough to reject obvious garbage.
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return jsonResponse(400, { error: 'Please provide a valid email address.' });
+    return json(400, { error: 'Please provide a valid email address.' });
   }
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     console.error('RESEND_API_KEY is not configured');
-    return jsonResponse(500, {
+    return json(500, {
       error: 'Contact form is not configured yet. Please email the owner directly.',
     });
   }
@@ -72,7 +71,7 @@ async function contactHandler(event: HandlerEvent) {
   const toEmail = process.env.CONTACT_INBOX;
   if (!toEmail) {
     console.error('CONTACT_INBOX is not configured');
-    return jsonResponse(500, {
+    return json(500, {
       error: 'Contact form destination is not configured. Please email the owner directly.',
     });
   }
@@ -104,16 +103,16 @@ async function contactHandler(event: HandlerEvent) {
 
     if (!response.ok) {
       console.error('Resend API error status:', response.status);
-      return jsonResponse(response.status, {
+      return json(response.status, {
         error: (data as any)?.message || 'Failed to send email via Resend',
       });
     }
 
-    return jsonResponse(200, { success: true, id: (data as any)?.id });
+    return json(200, { success: true, id: (data as any)?.id });
   } catch (error: any) {
     console.error('Contact form error:', error?.message || error);
-    return jsonResponse(500, { error: 'Internal server error while sending email' });
+    return json(500, { error: 'Internal server error while sending email' });
   }
-}
+};
 
-export { contactHandler as handler };
+export { handler };
