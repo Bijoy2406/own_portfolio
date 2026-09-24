@@ -145,14 +145,14 @@ const ModelPicker: React.FC<ModelPickerProps> = ({
   }, [open, menuRef, onOpenChange]);
 
   return (
-    <div ref={menuRef} className="relative shrink min-w-0">
+    <div ref={menuRef} className="relative w-full min-w-0">
       <button
         type="button"
         onClick={() => onOpenChange(!open)}
         aria-haspopup="listbox"
         aria-expanded={open}
         title="Switch AI model"
-        className="flex items-center gap-1.5 max-w-[140px] sm:max-w-[170px] px-2.5 py-1.5 text-xs font-medium text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors truncate"
+        className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-300 bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 rounded-lg transition-colors truncate"
       >
         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${loading ? "bg-zinc-600 animate-pulse" : selected?.available === false ? "bg-red-500" : "bg-emerald-500"}`} />
         <span className="truncate">{triggerLabel}</span>
@@ -216,7 +216,7 @@ export const ChatBot: React.FC = () => {
     {
       id: "init",
       role: "assistant",
-      content: "Hi! I'm **Cipher** — Tajuddin's portfolio assistant. Ask me anything about his projects, technical skills, education, or how to reach him!",
+      content: "Welcome! I'm **Cipher** — Tajuddin’s virtual stand-in while he’s busy building and shipping features.What brings you to his portfolio today? Pick a shortcut below or type your question to get started.",
     },
   ]);
   const [input, setInput] = useState("");
@@ -436,7 +436,7 @@ export const ChatBot: React.FC = () => {
     setMessages([{
       id: "init",
       role: "assistant",
-      content: "Hi! I'm **Cipher** — Tajuddin's portfolio assistant. Ask me anything about his projects, technical skills, education, or how to reach him!",
+      content: "Welcome! I'm **Cipher** — Tajuddin’s virtual stand-in while he’s busy building and shipping features.What brings you to his portfolio today? Pick a shortcut below or type your question to get started.",
     }]);
     setShowSuggestions(true);
     setLastUserMsg(null);
@@ -509,54 +509,56 @@ export const ChatBot: React.FC = () => {
             aria-label="Cipher — Portfolio AI Assistant"
             className="fixed bottom-6 right-6 z-50 w-[90vw] max-w-[400px] h-[540px] max-h-[82vh] bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Header */}
-            <div className="flex items-center justify-between gap-2 p-3 sm:p-4 bg-zinc-950/70 border-b border-zinc-800 backdrop-blur-sm shrink-0">
-              <div className="flex items-center gap-3 min-w-0">
+            {/* Header — two rows on narrow panels so the title, model picker,
+                and action buttons never fight for horizontal space. Row 1:
+                identity (avatar + name + status). Row 2: model picker (flex-1)
+                + action buttons. */}
+            <div className="bg-zinc-950/70 border-b border-zinc-800 backdrop-blur-sm shrink-0">
+              <div className="flex items-center gap-3 px-3 pt-3 pb-2 sm:px-4 sm:pt-4">
                 <div className="w-8 h-8 bg-emerald-500/10 border border-emerald-500/20 rounded-full flex items-center justify-center shrink-0">
                   <Bot className="w-4 h-4 text-emerald-400" />
                 </div>
-                <div className="min-w-0">
-                  <h3 className="text-sm font-semibold text-zinc-100">Cipher</h3>
-                  <div className="flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    <p className="text-xs text-zinc-400">Portfolio Assistant</p>
-                  </div>
+                <div className="flex items-center gap-1.5 min-w-0">
+                  <h3 className="text-sm font-semibold text-zinc-100 truncate">Cipher</h3>
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" aria-hidden="true" />
+                  <span className="text-xs text-zinc-400 truncate">Portfolio Assistant</span>
                 </div>
               </div>
-
-              {/* Model picker dropdown — sits between the title and the
-                  action buttons. Compact on narrow widths so the header never
-                  wraps awkwardly. */}
-              <ModelPicker
-                models={models}
-                loading={modelsLoading}
-                selectedId={selectedModelId}
-                onSelect={(id) => {
-                  setSelectedModelId(id);
-                  try { window.localStorage.setItem(MODEL_STORAGE_KEY, id); } catch {}
-                  setModelMenuOpen(false);
-                }}
-                open={modelMenuOpen}
-                onOpenChange={setModelMenuOpen}
-                menuRef={modelMenuRef}
-              />
-
-              <div className="flex items-center gap-1 shrink-0">
-                <button
-                  onClick={handleNewChat}
-                  title="New chat"
-                  className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors rounded-lg hover:bg-zinc-800"
-                  aria-label="Start new chat"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
-                <button
-                  onClick={() => setIsOpen(false)}
-                  className="p-1.5 text-zinc-400 hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-800"
-                  aria-label="Close chat"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              <div className="flex items-center justify-between gap-2 px-3 pb-3 sm:px-4 sm:pb-4 border-t border-zinc-800/60 pt-2">
+                {/* Model picker — flex-1 so it takes remaining row width
+                    without colliding with the action buttons. */}
+                <div className="flex-1 min-w-0">
+                  <ModelPicker
+                    models={models}
+                    loading={modelsLoading}
+                    selectedId={selectedModelId}
+                    onSelect={(id) => {
+                      setSelectedModelId(id);
+                      try { window.localStorage.setItem(MODEL_STORAGE_KEY, id); } catch {}
+                      setModelMenuOpen(false);
+                    }}
+                    open={modelMenuOpen}
+                    onOpenChange={setModelMenuOpen}
+                    menuRef={modelMenuRef}
+                  />
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <button
+                    onClick={handleNewChat}
+                    title="New chat"
+                    className="p-1.5 text-zinc-500 hover:text-zinc-300 transition-colors rounded-lg hover:bg-zinc-800"
+                    aria-label="Start new chat"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => setIsOpen(false)}
+                    className="p-1.5 text-zinc-400 hover:text-zinc-100 transition-colors rounded-lg hover:bg-zinc-800"
+                    aria-label="Close chat"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
             </div>
 
