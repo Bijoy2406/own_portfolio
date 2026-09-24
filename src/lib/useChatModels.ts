@@ -74,7 +74,7 @@ export function useChatModels(): UseChatModelsResult {
       // the deploy. The visitor's chosen default model will still be used
       // by the server when they send a chat message without picking.
       setModels([
-        { id: 'space-bunny-alpha-bynara', label: 'Space Bunny Alpha (Bynara)', available: true },
+        { id: 'ling-3.0-flash-vl-free', label: 'Ling 3.0 Flash VL (Free)', available: true },
         { id: 'laguna-s-2.1', label: 'Laguna S 2.1', available: true },
         { id: 'ling-3.0-flash-fin-free', label: 'Ling 3.0 Flash (Free)', available: true },
         { id: 'ling-3.0-flash-sante-free', label: 'Ling 3.0 Flash Sante (Free)', available: true },

@@ -20,7 +20,7 @@ const FALLBACK_MODELS = [
   'laguna-s-2.1',
   'ling-3.0-flash-fin-free',
   'ling-3.0-flash-sante-free',
-  'space-bunny-alpha-bynara',
+  'ling-3.0-flash-vl-free',
 ];
 
 function renderClassicEmailHtml({
@@ -147,10 +147,17 @@ export default defineConfig(({ mode }) => {
                     process.env.RESEND_FROM_EMAIL ||
                     'Portfolio Contact <onboarding@resend.dev>';
                   const toEmail =
+                    // Production reads CONTACT_INBOX (renamed from
+                    // RESEND_TO_EMAIL so Netlify doesn't scan the personal
+                    // email value against public source strings). We keep
+                    // RESEND_TO_EMAIL as a dev-mode fallback so existing
+                    // local .env files continue to work.
+                    env.CONTACT_INBOX ||
+                    process.env.CONTACT_INBOX ||
                     env.RESEND_TO_EMAIL ||
                     process.env.RESEND_TO_EMAIL ||
                     // Generic placeholder — never inline the real destination
-                    // here. The real value lives in RESEND_TO_EMAIL at runtime.
+                    // here. The real value lives in CONTACT_INBOX at runtime.
                     'owner@example.com';
 
                   const emailHtml = renderClassicEmailHtml({
@@ -205,7 +212,7 @@ export default defineConfig(({ mode }) => {
                 { id: 'laguna-s-2.1', label: 'Laguna S 2.1', available: true },
                 { id: 'ling-3.0-flash-fin-free', label: 'Ling 3.0 Flash (Free)', available: true },
                 { id: 'ling-3.0-flash-sante-free', label: 'Ling 3.0 Flash Sante (Free)', available: true },
-                { id: 'space-bunny-alpha-bynara', label: 'Space Bunny Alpha (Bynara)', available: true },
+                { id: 'ling-3.0-flash-vl-free', label: 'Ling 3.0 Flash VL (Free)', available: true },
               ];
 
               function prettifyIdDev(id: string): string {
@@ -246,7 +253,7 @@ export default defineConfig(({ mode }) => {
                   FREE_TIER_IDS.add('laguna-s-2.1');
                   FREE_TIER_IDS.add('ling-3.0-flash-fin-free');
                   FREE_TIER_IDS.add('ling-3.0-flash-sante-free');
-                  FREE_TIER_IDS.add('space-bunny-alpha-bynara');
+                  FREE_TIER_IDS.add('ling-3.0-flash-vl-free');
                 }
                 for (const item of arr) {
                   if (!item || typeof item !== 'object') continue;

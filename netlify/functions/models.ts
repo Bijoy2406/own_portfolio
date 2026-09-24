@@ -32,7 +32,7 @@ const FREE_TIER_IDS: Set<string> = (() => {
       'laguna-s-2.1',
       'ling-3.0-flash-fin-free',
       'ling-3.0-flash-sante-free',
-      'space-bunny-alpha-bynara',
+      'ling-3.0-flash-vl-free',
     ]);
   }
   return new Set(ids);
@@ -48,7 +48,7 @@ const FALLBACK_MODELS: ModelEntry[] = [
   { id: 'laguna-s-2.1', label: 'Laguna S 2.1', available: true },
   { id: 'ling-3.0-flash-fin-free', label: 'Ling 3.0 Flash (Free)', available: true },
   { id: 'ling-3.0-flash-sante-free', label: 'Ling 3.0 Flash Sante (Free)', available: true },
-  { id: 'space-bunny-alpha-bynara', label: 'Space Bunny Alpha (Bynara)', available: true },
+  { id: 'ling-3.0-flash-vl-free', label: 'Ling 3.0 Flash VL (Free)', available: true },
 ];
 
 // ─── OpenAI-compatible normalization ───────────────────────────────────────

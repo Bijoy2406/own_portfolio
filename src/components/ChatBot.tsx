@@ -369,10 +369,10 @@ export const ChatBot: React.FC = () => {
         userMessage = "I'm getting a lot of questions right now — please wait a moment and try again.";
       } else if (status === 401 || status === 403) {
         // Don't inline the owner's email here — Netlify's secret-scanner
-        // compares env-var values (RESEND_TO_EMAIL = <personal-email>) to
-        // the repo + build output, so duplicating the string in client
-        // source would fail the deploy. Visitors can find contact details
-        // in the Contact section of the portfolio.
+        // compares env-var values against the repo + build output, so
+        // duplicating the personal-email string in client source would fail
+        // the deploy. Visitors can find contact details in the Contact
+        // section of the portfolio.
         userMessage = "There's a configuration issue on our end. Feel free to reach out via the Contact section of this portfolio.";
       } else if (status && status >= 500) {
         userMessage = "The AI service is temporarily unavailable. Please try again shortly.";

@@ -22,7 +22,7 @@ const FALLBACK_MODELS = [
   'laguna-s-2.1',
   'ling-3.0-flash-fin-free',
   'ling-3.0-flash-sante-free',
-  'space-bunny-alpha-bynara',
+  'ling-3.0-flash-vl-free',
 ];
 
 // ─── Rate Limiting ──────────────────────────────────────────────────────────
