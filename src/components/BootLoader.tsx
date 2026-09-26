@@ -118,7 +118,7 @@ export function BootLoader({ onComplete }: BootLoaderProps) {
       </div>
 
       <div className="absolute bottom-6 left-6 font-mono text-[11px] tracking-widest text-zinc-600 uppercase">
-        TAJDUDDIN AHMED BIJOY
+        Tajuddin Ahmed Bijoy
       </div>
 
       <div className="absolute bottom-6 right-6 font-mono text-[11px] tracking-widest text-zinc-600 uppercase flex items-center gap-1.5">

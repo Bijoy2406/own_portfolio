@@ -38,7 +38,7 @@ export interface UniversityProject {
 }
 
 export const PERSONAL_INFO = {
-  name: "Tajduddin Ahmed Bijoy",
+  name: "Tajuddin Ahmed Bijoy",
   title: "Full-Stack Web Developer",
   headline: "Learning, building, and growing as a full-stack developer.",
   tagline: "I'm a computer science student at AUST. I'm actively learning modern web development, striving to build professional-grade apps with React/Next.js, and shipping real projects along the way.",

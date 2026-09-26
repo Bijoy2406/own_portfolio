@@ -41,7 +41,7 @@ An initial fix attempt wrapped the exit in `AnimatePresence` with an `exit={{opa
 
 **Element:** `Navbar`'s desktop nav/logo (previously `md:flex`, 768px breakpoint)
 
-**Issue:** The desktop nav (logo + 6 links + Resume CTA) activated at Tailwind's `md:` (768px) — exactly the tablet test width — with no room for the content. The logo text "Tajduddin Ahmed Bijoy" wrapped across 3 lines and the nav pill squeezed awkwardly to the right.
+**Issue:** The desktop nav (logo + 6 links + Resume CTA) activated at Tailwind's `md:` (768px) — exactly the tablet test width — with no room for the content. The logo text "Tajuddin Ahmed Bijoy" wrapped across 3 lines and the nav pill squeezed awkwardly to the right.
 
 **Fix:** `src/components/Navbar.tsx` — moved all four `md:`/`md:hidden` toggles (desktop nav, desktop CTA, mobile menu button, mobile drawer) to `lg:` (1024px), giving the full nav enough room before switching away from the hamburger pattern.
 
