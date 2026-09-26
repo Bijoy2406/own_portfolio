@@ -22,26 +22,38 @@ const UniversityProjectCard: React.FC<{ project: UniversityProject }> = ({ proje
               <span className="text-[10px] font-mono uppercase tracking-wider text-emerald-400/80">
                 {project.course}
               </span>
-              <span className="text-zinc-700">·</span>
-              <span className="text-[10px] font-mono text-zinc-500">
-                {project.semester}
-              </span>
             </div>
           </div>
         </div>
-        {project.githubUrl && (
-          <a
-            href={project.githubUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-emerald-400 hover:border-zinc-700 transition-colors shrink-0"
-            title="View on GitHub"
-            aria-label={`View ${project.title} on GitHub`}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Github className="w-4 h-4" />
-          </a>
-        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {project.liveUrl && (
+            <a
+              href={project.liveUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 px-2 py-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-emerald-400 hover:border-zinc-700 transition-colors text-[10px] font-mono"
+              title="View live site"
+              aria-label={`View ${project.title} live site`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              Live
+            </a>
+          )}
+          {project.githubUrl && (
+            <a
+              href={project.githubUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="p-1.5 rounded-lg border border-zinc-800 bg-zinc-950/60 text-zinc-400 hover:text-emerald-400 hover:border-zinc-700 transition-colors"
+              title="View on GitHub"
+              aria-label={`View ${project.title} on GitHub`}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Github className="w-4 h-4" />
+            </a>
+          )}
+        </div>
       </div>
       <p className="text-sm text-zinc-300 leading-relaxed mb-4">
         {project.shortDescription}

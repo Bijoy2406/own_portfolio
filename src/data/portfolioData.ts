@@ -31,10 +31,10 @@ export interface UniversityProject {
   id: string;
   title: string;
   course: string;
-  semester: string;
   shortDescription: string;
   techStack: string[];
   githubUrl?: string;
+  liveUrl?: string;
 }
 
 export const PERSONAL_INFO = {
@@ -95,66 +95,37 @@ export const EDUCATION_DATA: EducationItem[] = [
 export const UNIVERSITY_PROJECTS: UniversityProject[] = [
   {
     id: "uni-1",
-    title: "Student Result Management System",
-    course: "Database Systems Lab",
-    semester: "L3 · S1",
-    shortDescription: "MySQL-backed CRUD system for managing student records, courses, and grading with normalized schema.",
-    techStack: ["MySQL", "PHP", "HTML", "CSS"],
-    githubUrl: "https://github.com/Bijoy2406"
+    title: "OctaByte",
+    course: "Software Engineering",
+    shortDescription: "Cross-platform Flutter marketplace for PC building — component browser with real-time pricing, peer-to-peer marketplace with in-app chat, social community wall, and video tutorials, backed by Firebase.",
+    techStack: ["Flutter", "Dart", "Firebase", "GetX"],
+    githubUrl: "https://github.com/Bijoy2406/OctaByte"
   },
   {
     id: "uni-2",
-    title: "Hospital Queue Simulator",
-    course: "Data Structures",
-    semester: "L2 · S2",
-    shortDescription: "Priority-queue driven simulator comparing FCFS vs priority-based patient scheduling with stats output.",
-    techStack: ["C++", "STL", "Queue"],
-    githubUrl: "https://github.com/Bijoy2406"
+    title: "RefinedTech",
+    course: "Software Engineering",
+    shortDescription: "Secure multi-user marketplace for refurbished electronics with role-based dashboards, escrow payments, fraud detection, and AI-powered product recommendations.",
+    techStack: ["React", "Laravel", "MySQL"],
+    githubUrl: "https://github.com/Bijoy2406/RefinedTech",
+    liveUrl: "https://refinedtech.netlify.app/"
   },
   {
     id: "uni-3",
-    title: "OOP Banking System",
-    course: "Object-Oriented Programming",
-    semester: "L2 · S1",
-    shortDescription: "Console banking app demonstrating inheritance, polymorphism, and abstract account types.",
-    techStack: ["Java", "OOP"],
-    githubUrl: "https://github.com/Bijoy2406"
+    title: "Trendycart",
+    course: "Full-Stack Web Development",
+    shortDescription: "Full-stack e-commerce app with separated React frontend and Node backend, JWT/Google OAuth authentication, and Chart.js-driven admin dashboards.",
+    techStack: ["React", "Node.js", "Express", "JWT"],
+    githubUrl: "https://github.com/Bijoy2406/Trendycart",
+    liveUrl: "https://trendycart.vercel.app/"
   },
   {
     id: "uni-4",
-    title: "Assembler Simulator",
-    course: "Computer Architecture",
-    semester: "L3 · S1",
-    shortDescription: "Two-pass assembler translating symbolic assembly into machine code with symbol table generation.",
-    techStack: ["C", "Systems"],
-    githubUrl: "https://github.com/Bijoy2406"
-  },
-  {
-    id: "uni-5",
-    title: "Sorting Algorithm Visualizer",
-    course: "Algorithms Lab",
-    semester: "L2 · S2",
-    shortDescription: "Browser visualizer comparing bubble, merge, quick, and heap sort with adjustable input sizes.",
-    techStack: ["JavaScript", "Canvas", "HTML"],
-    githubUrl: "https://github.com/Bijoy2406"
-  },
-  {
-    id: "uni-6",
-    title: "LAN Chat Application",
-    course: "Computer Networks",
-    semester: "L3 · S2",
-    shortDescription: "Socket-based chat over LAN supporting private rooms, broadcast, and message history.",
-    techStack: ["Java", "Sockets", "Swing"],
-    githubUrl: "https://github.com/Bijoy2406"
-  },
-  {
-    id: "uni-7",
-    title: "AI Tic-Tac-Toe Agent",
-    course: "Artificial Intelligence",
-    semester: "L3 · S2",
-    shortDescription: "Unbeatable tic-tac-toe using minimax with alpha-beta pruning and heuristic evaluation.",
-    techStack: ["Python", "AI"],
-    githubUrl: "https://github.com/Bijoy2406"
+    title: "The Web Chronicles",
+    course: "Computer Graphics",
+    shortDescription: "Spider-Man inspired 2D action game built with iGraphics — six levels, three playable characters, combat mechanics, boss battles, and a persistent high-score leaderboard.",
+    techStack: ["C++", "iGraphics", "OpenGL"],
+    githubUrl: "https://github.com/Bijoy2406/The-Web-Chronicles"
   }
 ];
 
