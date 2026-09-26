@@ -34,7 +34,7 @@ export const About: React.FC = () => {
             01. Background
           </span>
           <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-zinc-100 mt-2">
-            About Me
+            About Tajuddin Ahmed Bijoy
           </h2>
         </div>
 
@@ -103,7 +103,9 @@ export const About: React.FC = () => {
               <div className="relative rounded-xl overflow-hidden border border-zinc-800/80 shadow-lg bg-zinc-950 aspect-square group-hover:border-emerald-500/30 transition-colors duration-300">
                 <img
                   src="/projects/profile_pic.jpeg"
-                  alt="Profile"
+                  alt="Tajuddin Ahmed Bijoy — Full-Stack Web Developer"
+                  width="512"
+                  height="512"
                   className="w-full h-full object-cover"
                 />
               </div>

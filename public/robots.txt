@@ -1,7 +1,4 @@
 User-agent: *
 Allow: /
 
-# Crawl-delay is a polite hint; not all bots honor it.
-Crawl-delay: 1
-
 Sitemap: https://bijoy.ami.bd/sitemap.xml
